@@ -1,35 +1,48 @@
-# signer.py
-from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import ec, padding
-import base64
+from pathlib import Path
+from cryptography.hazmat.primitives import serialization, hashes
+from cryptography.hazmat.primitives.asymmetric import rsa
 
-def load_private_key(path):
-    with open(path, "rb") as f:
-        return serialization.load_pem_private_key(f.read(), password=None)
+KEY_DIR = Path("keys")
+KEY_DIR.mkdir(exist_ok=True)
 
-def load_public_key(path):
-    with open(path, "rb") as f:
-        return serialization.load_pem_public_key(f.read())
+def generate_keys():
+    """Generate RSA private/public key pair in correct PEM format (PKCS#8)."""
+    priv = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    pub = priv.public_key()
 
-def sign_bytes(priv_key, data_bytes) -> str:
-    # Using ECDSA P-256
-    if isinstance(priv_key, ec.EllipticCurvePrivateKey):
-        sig = priv_key.sign(data_bytes, ec.ECDSA(hashes.SHA256()))
-        return base64.b64encode(sig).decode()
-    # fallback to RSA
-    else:
-        sig = priv_key.sign(data_bytes, padding.PKCS1v15(), hashes.SHA256())
-        return base64.b64encode(sig).decode()
+    # Save private key in PKCS#8 format
+    priv_bytes = priv.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption()
+    )
+    (KEY_DIR / "private_key.pem").write_bytes(priv_bytes)
 
-def verify_signature(pub_key, data_bytes, signature_b64):
-    sig = base64.b64decode(signature_b64)
+    # Save public key in SubjectPublicKeyInfo format
+    pub_bytes = pub.public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo
+    )
+    (KEY_DIR / "public_key.pem").write_bytes(pub_bytes)
+
+    return priv, pub
+
+def load_private_key(path="keys/private_key.pem"):
+    """Load private key or auto-generate if missing/invalid."""
+    p = Path(path)
     try:
-        if hasattr(pub_key, "verifier"):
-            # older API
-            pub_key.verify(sig, data_bytes, padding.PKCS1v15(), hashes.SHA256())
-        else:
-            # try ECDSA
-            pub_key.verify(sig, data_bytes, ec.ECDSA(hashes.SHA256()))
-        return True
+        return serialization.load_pem_private_key(p.read_bytes(), password=None)
     except Exception:
-        return False
+        # If file missing or invalid → regenerate
+        priv, _ = generate_keys()
+        return priv
+
+def load_public_key(path="keys/public_key.pem"):
+    """Load public key or auto-generate if missing/invalid."""
+    p = Path(path)
+    try:
+        return serialization.load_pem_public_key(p.read_bytes())
+    except Exception:
+        _, pub = generate_keys()
+        return pub
+
