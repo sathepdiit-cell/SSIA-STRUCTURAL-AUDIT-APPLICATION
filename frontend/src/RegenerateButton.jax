@@ -1,0 +1,29 @@
+// RegenerateButton.jsx
+import React, {useState} from "react";
+
+export default function RegenerateButton(){
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
+
+  const regenerate = async () => {
+    setLoading(true);
+    const resp = await fetch("/regenerate", {method:"POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({audit_id:"SSIA-AUDIT-0001"})});
+    const j = await resp.json();
+    setResult(j);
+    setLoading(false);
+  };
+
+  return (
+    <div>
+      <button onClick={regenerate} disabled={loading}>{loading? "Regenerating..." : "Regenerate Report"}</button>
+      {result && (
+        <div>
+          <p>Report ready.</p>
+          <a href={`/reports/${result.result.pdf.split('/').pop()}`} target="_blank" rel="noreferrer">Download PDF</a><br/>
+          <a href={`/reports/${result.result.xlsx.split('/').pop()}`} target="_blank" rel="noreferrer">Download Excel</a><br/>
+          <img src={`/reports/${result.result.qr.split('/').pop()}`} alt="QR" style={{width:120}} />
+        </div>
+      )}
+    </div>
+  );
+}
