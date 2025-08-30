@@ -1,0 +1,7 @@
+{
+  "columns":["Timestamp","User","Action","Details","Status"],
+  "rows":[
+    {"Timestamp":"2025-08-31 10:00","User":"Er. P Sathe","Action":"Start audit","Details":"...","Status":"Compliant"},
+    {"Timestamp":"2025-08-31 10:12","User":"Auditor A","Action":"Observed crack","Details":"Beam B2...","Status":"Observation"}
+  ]
+}
