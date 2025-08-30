@@ -1,0 +1,7 @@
+Flask
+openpyxl
+qrcode[pil]
+cryptography
+apscheduler
+pandas
+Jinja2
