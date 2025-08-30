@@ -1,6 +1,6 @@
 from pathlib import Path
 from cryptography.hazmat.primitives import serialization, hashes
-from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives.asymmetric import rsa, padding
 
 KEY_DIR = Path("keys")
 KEY_DIR.mkdir(exist_ok=True)
@@ -33,7 +33,6 @@ def load_private_key(path="keys/private_key.pem"):
     try:
         return serialization.load_pem_private_key(p.read_bytes(), password=None)
     except Exception:
-        # If file missing or invalid → regenerate
         priv, _ = generate_keys()
         return priv
 
@@ -46,3 +45,23 @@ def load_public_key(path="keys/public_key.pem"):
         _, pub = generate_keys()
         return pub
 
+def sign_bytes(privkey, data: bytes) -> bytes:
+    """Sign arbitrary bytes with private key."""
+    return privkey.sign(
+        data,
+        padding.PKCS1v15(),
+        hashes.SHA256()
+    )
+
+def verify_signature(pubkey, signature: bytes, data: bytes) -> bool:
+    """Verify a signature with the given public key."""
+    try:
+        pubkey.verify(
+            signature,
+            data,
+            padding.PKCS1v15(),
+            hashes.SHA256()
+        )
+        return True
+    except Exception:
+        return False
